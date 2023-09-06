@@ -60,28 +60,21 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 std::time::Duration::from_secs(5),
                 reader.read(&mut buffer),
             ).await;
-
+        
             match read_result {
                 Ok(Ok(n)) if n == 0 => break,
                 Ok(Ok(n)) => {
                     let decoded = String::from_utf8_lossy(&buffer[..n]);
-
-                    if decoded.contains(">>") && decoded.contains("<<") {
-                        let chat_start = decoded.find(">>").unwrap();
-                        let chat_end = decoded.find("<<").unwrap();
-
-                        let chat_data = &decoded[chat_start..=chat_end];
-                        let before_chat = &decoded[0..chat_start];
-                        let after_chat = &decoded[chat_end + 2..];
-
-                        accumulated_data_koukoku.extend_from_slice(before_chat.as_bytes());
-                        accumulated_data_chat.extend_from_slice(chat_data.as_bytes());
-                        accumulated_data_chat.extend_from_slice(b"\n");  // チャットデータの後に改行を追加
-                        accumulated_data_koukoku.extend_from_slice(after_chat.as_bytes());
-                    } else {
+        
+                    // データ長が4バイト以下の場合は公告
+                    if n <= 4 {
                         accumulated_data_koukoku.extend_from_slice(decoded.as_bytes());
+                    } else {
+                        // それ以外の場合はチャット
+                        let sanitized_chat = format!("{}\n", decoded);
+                        accumulated_data_chat.extend_from_slice(sanitized_chat.as_bytes());
                     }
-
+                    
                     print!("{}", decoded);
                     io::stdout().flush().unwrap();
                 }
