@@ -52,18 +52,36 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let read_task = tokio::spawn(async move {
         let mut buffer = vec![0u8; 4096];
-        let mut accumulated_data = Vec::new();
+        let mut accumulated_data_koukoku = Vec::new();
+        let mut accumulated_data_chat = Vec::new();
 
         loop {
-            let read_result =
-                tokio::time::timeout(std::time::Duration::from_secs(5), reader.read(&mut buffer))
-                    .await;
+            let read_result = tokio::time::timeout(
+                std::time::Duration::from_secs(5),
+                reader.read(&mut buffer),
+            ).await;
 
             match read_result {
                 Ok(Ok(n)) if n == 0 => break,
                 Ok(Ok(n)) => {
                     let decoded = String::from_utf8_lossy(&buffer[..n]);
-                    accumulated_data.extend_from_slice(decoded.as_bytes());
+
+                    if decoded.contains(">>") && decoded.contains("<<") {
+                        let chat_start = decoded.find(">>").unwrap();
+                        let chat_end = decoded.find("<<").unwrap();
+
+                        let chat_data = &decoded[chat_start..=chat_end];
+                        let before_chat = &decoded[0..chat_start];
+                        let after_chat = &decoded[chat_end + 2..];
+
+                        accumulated_data_koukoku.extend_from_slice(before_chat.as_bytes());
+                        accumulated_data_chat.extend_from_slice(chat_data.as_bytes());
+                        accumulated_data_chat.extend_from_slice(b"\n");  // チャットデータの後に改行を追加
+                        accumulated_data_koukoku.extend_from_slice(after_chat.as_bytes());
+                    } else {
+                        accumulated_data_koukoku.extend_from_slice(decoded.as_bytes());
+                    }
+
                     print!("{}", decoded);
                     io::stdout().flush().unwrap();
                 }
@@ -71,7 +89,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     eprintln!("Read error: {}", e);
                 }
                 Err(_) => {
-                    // 5秒間データの受信が途切れた場合
                     eprintln!("No data received for 5 seconds. Disconnecting...");
                     break;
                 }
@@ -80,9 +97,18 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
         // バッファの内容をファイルに保存
         let current_time = Local::now();
-        let filename = current_time.format("%Y%m%d%H%M.txt").to_string();
-        if let Err(e) = File::create(&filename).and_then(|mut f| f.write_all(&accumulated_data)) {
-            eprintln!("Failed to write data to {}: {}", filename, e);
+        let filename_koukoku = current_time.format("%Y%m%d%H%Mkoukoku.txt").to_string();
+        if let Err(e) = File::create(&filename_koukoku)
+            .and_then(|mut f| f.write_all(&accumulated_data_koukoku))
+        {
+            eprintln!("Failed to write data to {}: {}", filename_koukoku, e);
+        }
+
+        let filename_chat = current_time.format("%Y%m%d%H%Mchat.txt").to_string();
+        if let Err(e) = File::create(&filename_chat)
+            .and_then(|mut f| f.write_all(&accumulated_data_chat))
+        {
+            eprintln!("Failed to write data to {}: {}", filename_chat, e);
         }
 
         finished_flag.store(true, Ordering::SeqCst);
