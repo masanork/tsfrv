@@ -5,6 +5,7 @@ use std::fs::File;
 use std::io::{self, Write};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use tokio::signal;
 use tokio::io::{split, AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio_rustls::rustls::{ClientConfig, RootCertStore};
@@ -48,7 +49,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let (mut reader, mut writer) = split(stream);
 
     let finished_flag = Arc::new(AtomicBool::new(false));
+    let flag_for_read = finished_flag.clone();
     let flag_for_write = finished_flag.clone();
+    let flag_for_ctrl_c_read = finished_flag.clone();
+    let flag_for_ctrl_c_write = finished_flag.clone();
+    let flag_for_ctrl_c_signal = finished_flag.clone();
 
     let read_task = tokio::spawn(async move {
         let mut buffer = vec![0u8; 4096];
@@ -56,35 +61,25 @@ async fn main() -> Result<(), Box<dyn Error>> {
         let mut accumulated_data_chat = Vec::new();
 
         loop {
-            let read_result = tokio::time::timeout(
-                std::time::Duration::from_secs(5),
-                reader.read(&mut buffer),
-            ).await;
-        
-            match read_result {
-                Ok(Ok(n)) if n == 0 => break,
-                Ok(Ok(n)) => {
+            match reader.read(&mut buffer).await {
+                Ok(n) if n == 0 => break,
+                Ok(n) => {
                     let decoded = String::from_utf8_lossy(&buffer[..n]);
-        
-                    // データ長が4バイト以下の場合は公告
-                    if n <= 4 {
+                    if n <= 8 {
                         accumulated_data_koukoku.extend_from_slice(decoded.as_bytes());
                     } else {
-                        // それ以外の場合はチャット
                         let sanitized_chat = format!("{}\n", decoded);
                         accumulated_data_chat.extend_from_slice(sanitized_chat.as_bytes());
                     }
-                    
                     print!("{}", decoded);
                     io::stdout().flush().unwrap();
-                }
-                Ok(Err(e)) => {
+                },
+                Err(e) => {
                     eprintln!("Read error: {}", e);
                 }
-                Err(_) => {
-                    eprintln!("No data received for 5 seconds. Disconnecting...");
-                    break;
-                }
+            }
+            if flag_for_read.load(Ordering::SeqCst) || flag_for_ctrl_c_read.load(Ordering::SeqCst) {
+                break;
             }
         }
 
@@ -105,11 +100,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
 
         finished_flag.store(true, Ordering::SeqCst);
+        flag_for_read.store(true, Ordering::SeqCst);
     });
 
     let write_task = tokio::spawn(async move {
         let mut input_buffer = String::new();
-
         while !flag_for_write.load(Ordering::SeqCst) {
             input_buffer.clear();
             std::io::stdin()
@@ -119,11 +114,18 @@ async fn main() -> Result<(), Box<dyn Error>> {
             if let Err(e) = writer.write_all(&encoded).await {
                 eprintln!("Write error: {}", e);
             }
+            if flag_for_ctrl_c_write.load(Ordering::SeqCst) {
+                break;
+            }    
         }
     });
 
-    tokio::try_join!(read_task, write_task)?;
+    let ctrl_c_task = tokio::spawn(async move {
+        signal::ctrl_c().await.expect("Failed to listen for Ctrl+C");
+        flag_for_ctrl_c_signal.store(true, Ordering::SeqCst);
+    });
 
-    // プログラムを終了します。
+    tokio::try_join!(read_task, write_task, ctrl_c_task)?;
+
     std::process::exit(0);
 }
