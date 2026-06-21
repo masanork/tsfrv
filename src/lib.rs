@@ -319,16 +319,20 @@ fn help_html() -> String {
     )
 }
 
-fn html_headers() -> Result<worker::Headers> {
+fn html_headers(csp: &str) -> Result<worker::Headers> {
     let headers = worker::Headers::new();
-    headers.set(
-        "Content-Security-Policy",
-        "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'",
-    )?;
+    headers.set("Content-Type", "text/html; charset=utf-8")?;
+    headers.set("Content-Security-Policy", csp)?;
     headers.set("Referrer-Policy", "no-referrer")?;
     headers.set("X-Content-Type-Options", "nosniff")?;
     headers.set("X-Frame-Options", "DENY")?;
     Ok(headers)
+}
+
+fn html_response(html: String, csp: &str) -> Result<Response> {
+    Ok(Response::from_html(html)?
+        .with_headers(html_headers(csp)?)
+        .with_status(200))
 }
 
 #[event(fetch, respond_with_errors)]
@@ -346,26 +350,18 @@ pub async fn main(req: Request, env: Env, ctx: Context) -> Result<Response> {
     let router = Router::new();
 
     router
-        .get("/", |_req, _ctx| {
-            Ok(Response::from_html(help_html())?
-                .with_headers(html_headers()?)
-                .with_status(200))
-        })
-        .get("/help", |_req, _ctx| {
-            Ok(Response::from_html(help_html())?
-                .with_headers(html_headers()?)
-                .with_status(200))
-        })
-        .get("/view", |_req, _ctx| {
-            let headers = html_headers()?;
-            headers.set(
-                "Content-Security-Policy",
-                "default-src 'none'; script-src 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'unsafe-inline' https://cdn.jsdelivr.net; connect-src 'self'; base-uri 'none'; form-action 'none'",
-            )?;
-            Ok(Response::from_html(view_html())?
-                .with_headers(headers)
-                .with_status(200))
-        })
+        .get("/", |_req, _ctx| Ok(html_response(
+            help_html(),
+            "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'",
+        )?))
+        .get("/help", |_req, _ctx| Ok(html_response(
+            help_html(),
+            "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'",
+        )?))
+        .get("/view", |_req, _ctx| Ok(html_response(
+            view_html(),
+            "default-src 'none'; script-src 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'unsafe-inline' https://cdn.jsdelivr.net; connect-src 'self'; base-uri 'none'; form-action 'none'",
+        )?))
         .get_async("/stream", |req, ctx| async move {
             let url = req.url()?;
             let (default_server, default_port) = default_target();
