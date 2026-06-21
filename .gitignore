@@ -14,3 +14,13 @@ Cargo.lock
 *.pdb
 *.txt
 .DS_Store
+
+# Cloudflare Workers
+build/
+node_modules/
+.wrangler/
+
+# Generated supply-chain artifacts
+sbom/
+dist/
+cyclonedx-rs.json

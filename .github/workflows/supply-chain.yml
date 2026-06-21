@@ -1,0 +1,92 @@
+name: Supply Chain
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+  artifact-metadata: write
+
+jobs:
+  build-and-attest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install tooling
+        run: |
+          cargo install cargo-cyclonedx --locked
+          cargo install worker-build@0.8.5 --locked
+
+      - run: npm ci
+      - run: worker-build --release --no-panic-recovery
+
+      - name: Generate Rust SBOM
+        run: |
+          cargo cyclonedx \
+            --manifest-path Cargo.toml \
+            --format json \
+            --override-filename cyclonedx-rs \
+            --spec-version 1.5 \
+            --target wasm32-unknown-unknown
+          mkdir -p sbom
+          mv cyclonedx-rs.json sbom/
+
+      - name: Generate npm SBOM
+        run: npx @cyclonedx/cyclonedx-npm --output-file sbom/cyclonedx-npm.json
+
+      - name: Generate CBOM
+        env:
+          GITHUB_SHA: ${{ github.sha }}
+        run: node scripts/generate-cbom.mjs
+
+      - name: Package release artifact
+        run: |
+          mkdir -p dist
+          tar -czf dist/tsfrv-worker.tar.gz build sbom
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: tsfrv-supply-chain
+          path: |
+            dist/tsfrv-worker.tar.gz
+            sbom/
+          if-no-files-found: error
+
+      - name: Attest SLSA Build L3 provenance
+        uses: actions/attest@v4
+        with:
+          subject-path: dist/tsfrv-worker.tar.gz
+
+      - name: Attest Rust SBOM
+        uses: actions/attest@v4
+        with:
+          subject-path: dist/tsfrv-worker.tar.gz
+          sbom-path: sbom/cyclonedx-rs.json
+
+      - name: Attest npm SBOM
+        uses: actions/attest@v4
+        with:
+          subject-path: dist/tsfrv-worker.tar.gz
+          sbom-path: sbom/cyclonedx-npm.json
+
+      - name: Attest CBOM
+        uses: actions/attest@v4
+        with:
+          subject-path: dist/tsfrv-worker.tar.gz
+          sbom-path: sbom/cbom.json

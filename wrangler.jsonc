@@ -1,0 +1,9 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "tsfrv",
+  "main": "build/index.js",
+  "compatibility_date": "2026-06-21",
+  "build": {
+    "command": "cargo install -q worker-build@0.8.5 && worker-build --release --no-panic-recovery"
+  }
+}
