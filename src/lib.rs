@@ -214,7 +214,7 @@ fn view_html() -> String {
     body { font-family: ui-monospace, monospace; margin: 0; background: #111; color: #eee; }
     header { padding: 0.75rem 1rem; background: #222; position: sticky; top: 0; }
     #status { color: #9fd; }
-    pre { white-space: pre-wrap; word-break: break-word; padding: 1rem; margin: 0; }
+    pre { white-space: pre; overflow-x: auto; padding: 1rem; margin: 0; tab-size: 8; }
   </style>
 </head>
 <body>
@@ -305,7 +305,14 @@ pub async fn main(req: Request, env: Env, ctx: Context) -> Result<Response> {
     let router = Router::new();
 
     router
-        .get("/", |_req, _ctx| {
+        .get("/", |req, _ctx| {
+            let mut url = req.url()?;
+            url.set_path("/view");
+            url.set_query(None);
+            url.set_fragment(None);
+            Ok(Response::redirect(url)?)
+        })
+        .get("/help", |_req, _ctx| {
             Ok(Response::from_html(help_html())?
                 .with_headers(html_headers()?)
                 .with_status(200))
