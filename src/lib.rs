@@ -209,37 +209,78 @@ fn view_html() -> String {
 <html lang="ja">
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>tsfrv view</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css">
   <style>
-    body { font-family: ui-monospace, monospace; margin: 0; background: #111; color: #eee; }
-    header { padding: 0.75rem 1rem; background: #222; position: sticky; top: 0; }
+    body { margin: 0; background: #111; color: #eee; font-family: system-ui, sans-serif; }
+    header {
+      display: flex; gap: 1rem; align-items: center; justify-content: space-between;
+      padding: 0.75rem 1rem; background: #222; position: sticky; top: 0; z-index: 1;
+    }
     #status { color: #9fd; }
-    pre { white-space: pre; overflow-x: auto; padding: 1rem; margin: 0; tab-size: 8; }
+    #hint { color: #aaa; font-size: 0.85rem; }
+    #terminal { height: calc(100vh - 3.25rem); padding: 0.25rem; box-sizing: border-box; }
+    .xterm { height: 100%; }
   </style>
 </head>
 <body>
-  <header><span id="status">接続中...</span></header>
-  <pre id="out"></pre>
+  <header>
+    <span id="status">接続中...</span>
+    <span id="hint">公告は配信間隔があり、数十秒止まることがあります</span>
+  </header>
+  <div id="terminal"></div>
+  <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js"></script>
   <script>
-    const out = document.getElementById('out');
     const status = document.getElementById('status');
-    let bytes = 0;
-    fetch('/stream').then(async (res) => {
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        bytes += value.length;
-        out.textContent += decoder.decode(value, { stream: true });
-        status.textContent = `受信中 (${bytes} bytes)`;
-        window.scrollTo(0, document.body.scrollHeight);
-      }
-      status.textContent = `終了 (${bytes} bytes)`;
-    }).catch((err) => {
-      status.textContent = 'エラー: ' + err.message;
+    const term = new Terminal({
+      disableStdin: true,
+      cursorBlink: false,
+      convertEol: true,
+      scrollback: 5000,
+      fontFamily: '"Noto Sans Mono CJK JP", "MS Gothic", "Osaka-Mono", monospace',
+      fontSize: 14,
+      theme: { background: '#111111', foreground: '#eeeeee' },
     });
+    term.open(document.getElementById('terminal'));
+
+    let bytes = 0;
+    let idleTimer = null;
+
+    function setStatus(message) {
+      status.textContent = message;
+    }
+
+    function resetIdleTimer() {
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => {
+        setStatus(`待機中 (${bytes} bytes)`);
+      }, 8000);
+    }
+
+    async function pump() {
+      setStatus('接続中...');
+      const decoder = new TextDecoder('utf-8');
+      try {
+        const res = await fetch('/stream', { cache: 'no-store' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const reader = res.body.getReader();
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          bytes += value.length;
+          term.write(decoder.decode(value, { stream: true }));
+          setStatus(`受信中 (${bytes} bytes)`);
+          resetIdleTimer();
+        }
+        term.write(decoder.decode());
+        setStatus(`終了 (${bytes} bytes)`);
+      } catch (err) {
+        setStatus('エラー: ' + err.message);
+      }
+    }
+
+    pump();
   </script>
 </body>
 </html>"#.to_string()
@@ -269,7 +310,7 @@ fn help_html() -> String {
   </ul>
   <h2>例</h2>
   <ul>
-    <li><a href="/view">/view</a>（ブラウザ向けストリームビューア）</li>
+    <li><a href="/view">/view</a>（ブラウザ向けターミナルビューア・推奨）</li>
     <li><a href="/stream">/stream</a>（生テキスト）</li>
   </ul>
   <p>公告は配信間隔があるため、数十秒データが来ない時間があります。接続が切れたわけではありません。</p>
@@ -305,12 +346,10 @@ pub async fn main(req: Request, env: Env, ctx: Context) -> Result<Response> {
     let router = Router::new();
 
     router
-        .get("/", |req, _ctx| {
-            let mut url = req.url()?;
-            url.set_path("/view");
-            url.set_query(None);
-            url.set_fragment(None);
-            Ok(Response::redirect(url)?)
+        .get("/", |_req, _ctx| {
+            Ok(Response::from_html(help_html())?
+                .with_headers(html_headers()?)
+                .with_status(200))
         })
         .get("/help", |_req, _ctx| {
             Ok(Response::from_html(help_html())?
@@ -321,7 +360,7 @@ pub async fn main(req: Request, env: Env, ctx: Context) -> Result<Response> {
             let headers = html_headers()?;
             headers.set(
                 "Content-Security-Policy",
-                "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; form-action 'none'",
+                "default-src 'none'; script-src 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'unsafe-inline' https://cdn.jsdelivr.net; connect-src 'self'; base-uri 'none'; form-action 'none'",
             )?;
             Ok(Response::from_html(view_html())?
                 .with_headers(headers)
