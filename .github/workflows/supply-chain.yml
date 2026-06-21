@@ -60,7 +60,7 @@ jobs:
           tar -czf dist/tsfrv-worker.tar.gz build sbom
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: tsfrv-supply-chain
           path: |
