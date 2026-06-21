@@ -212,71 +212,241 @@ fn view_html() -> String {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>tsfrv view</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=VT323&display=swap">
   <style>
-    body { margin: 0; background: #111; color: #eee; font-family: system-ui, sans-serif; }
-    header {
-      display: flex; gap: 1rem; align-items: center; justify-content: space-between;
-      padding: 0.75rem 1rem; background: #222; position: sticky; top: 0; z-index: 1;
+    @font-face {
+      font-family: 'DSEG7';
+      src: url('https://cdn.jsdelivr.net/npm/dseg@0.46.0/fonts/DSEG7-Classic/DSEG7-Classic.woff2') format('woff2');
+      font-weight: normal;
+      font-style: normal;
     }
-    #status { color: #9fd; }
-    #hint { color: #aaa; font-size: 0.85rem; }
-    #terminal { height: calc(100vh - 3.25rem); padding: 0.25rem; box-sizing: border-box; }
+    :root {
+      --phosphor: #39ff14;
+      --phosphor-dim: #1a8f0a;
+      --bezel: #1a1410;
+      --panel: #0d120d;
+    }
+    body {
+      margin: 0;
+      background: #000;
+      color: var(--phosphor-dim);
+      font-family: 'VT323', monospace;
+    }
+    header {
+      display: flex;
+      gap: 1.25rem;
+      align-items: center;
+      flex-wrap: wrap;
+      padding: 0.6rem 1rem;
+      background: linear-gradient(180deg, #141a14 0%, var(--panel) 100%);
+      border-bottom: 2px solid #2a1f14;
+      box-shadow: inset 0 -1px 0 #000, 0 2px 8px #0008;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+    .brand {
+      font-size: 1.4rem;
+      color: var(--phosphor);
+      letter-spacing: 0.15em;
+      text-shadow: 0 0 6px #39ff1466;
+    }
+    .leds {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+    }
+    .led-group {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 1.1rem;
+      letter-spacing: 0.1em;
+    }
+    .led {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: #1a1010;
+      box-shadow: inset 0 1px 3px #000c;
+      transition: background 0.05s, box-shadow 0.05s;
+    }
+    .led-tx.on {
+      background: #ff2222;
+      box-shadow: 0 0 6px #ff2222, 0 0 14px #ff222288, inset 0 0 4px #fff4;
+    }
+    .led-rx.on {
+      background: #22ff44;
+      box-shadow: 0 0 6px #22ff44, 0 0 14px #22ff4488, inset 0 0 4px #fff4;
+    }
+    .counter {
+      display: flex;
+      flex-direction: column;
+      gap: 0.1rem;
+    }
+    .counter-label {
+      font-size: 0.85rem;
+      letter-spacing: 0.12em;
+      color: #5a6a5a;
+    }
+    .seven-seg {
+      font-family: 'DSEG7', monospace;
+      font-size: 1.6rem;
+      color: #ff4422;
+      text-shadow: 0 0 6px #ff442288;
+      letter-spacing: 0.08em;
+      min-width: 7.5em;
+    }
+    #state {
+      font-size: 1.15rem;
+      color: var(--phosphor);
+      text-shadow: 0 0 4px #39ff1444;
+    }
+    #hint {
+      margin-left: auto;
+      font-size: 0.95rem;
+      color: #4a5a4a;
+      max-width: 20rem;
+    }
+    #screen {
+      position: relative;
+      height: calc(100vh - 3.5rem);
+      background: #020a02;
+      overflow: hidden;
+    }
+    #screen::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        #00000018 2px,
+        #00000018 4px
+      );
+    }
+    #screen::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1;
+      background: radial-gradient(ellipse at center, transparent 55%, #00000088 100%);
+    }
+    #terminal {
+      height: 100%;
+      padding: 0.5rem;
+      box-sizing: border-box;
+    }
     .xterm { height: 100%; }
+    .xterm-screen {
+      text-shadow: 0 0 5px #39ff1466, 0 0 12px #39ff1422;
+    }
+    @media (max-width: 640px) {
+      #hint { display: none; }
+    }
   </style>
 </head>
 <body>
   <header>
-    <span id="status">接続中...</span>
+    <span class="brand">TSFRV</span>
+    <div class="leds">
+      <div class="led-group">
+        <span>TX</span>
+        <span id="led-tx" class="led led-tx"></span>
+      </div>
+      <div class="led-group">
+        <span>RX</span>
+        <span id="led-rx" class="led led-rx"></span>
+      </div>
+    </div>
+    <div class="counter">
+      <span class="counter-label">RX BYTES</span>
+      <span id="bytes" class="seven-seg">0000000</span>
+    </div>
+    <span id="state">CONNECT</span>
     <span id="hint">公告は配信間隔があり、数十秒止まることがあります</span>
   </header>
-  <div id="terminal"></div>
+  <div id="screen">
+    <div id="terminal"></div>
+  </div>
   <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js"></script>
   <script>
-    const status = document.getElementById('status');
+    const ledTx = document.getElementById('led-tx');
+    const ledRx = document.getElementById('led-rx');
+    const bytesEl = document.getElementById('bytes');
+    const stateEl = document.getElementById('state');
+
+    const PHOSPHOR = '#39ff14';
     const term = new Terminal({
       disableStdin: true,
-      cursorBlink: false,
+      cursorBlink: true,
       convertEol: true,
       scrollback: 5000,
-      fontFamily: '"Noto Sans Mono CJK JP", "MS Gothic", "Osaka-Mono", monospace',
-      fontSize: 14,
-      theme: { background: '#111111', foreground: '#eeeeee' },
+      fontFamily: '"DotGothic16", "VT323", monospace',
+      fontSize: 16,
+      lineHeight: 1.1,
+      theme: {
+        background: '#020a02',
+        foreground: PHOSPHOR,
+        cursor: PHOSPHOR,
+        cursorAccent: '#020a02',
+        selectionBackground: '#39ff1433',
+      },
     });
     term.open(document.getElementById('terminal'));
 
     let bytes = 0;
     let idleTimer = null;
 
-    function setStatus(message) {
-      status.textContent = message;
+    function pulseLed(el, duration) {
+      el.classList.add('on');
+      clearTimeout(el._pulse);
+      el._pulse = setTimeout(() => el.classList.remove('on'), duration);
+    }
+
+    function setBytes(n) {
+      bytesEl.textContent = String(n).padStart(7, '0');
+    }
+
+    function setState(text) {
+      stateEl.textContent = text;
     }
 
     function resetIdleTimer() {
       clearTimeout(idleTimer);
-      idleTimer = setTimeout(() => {
-        setStatus(`待機中 (${bytes} bytes)`);
-      }, 8000);
+      idleTimer = setTimeout(() => setState('WAIT'), 8000);
     }
 
     async function pump() {
-      setStatus('接続中...');
+      setState('CONNECT');
+      setBytes(0);
       const decoder = new TextDecoder('utf-8');
       try {
+        pulseLed(ledTx, 250);
         const res = await fetch('/stream', { cache: 'no-store' });
         if (!res.ok) throw new Error('HTTP ' + res.status);
+        pulseLed(ledTx, 120);
+        setState('ONLINE');
         const reader = res.body.getReader();
         while (true) {
           const { value, done } = await reader.read();
           if (done) break;
           bytes += value.length;
+          pulseLed(ledRx, 90);
+          setBytes(bytes);
           term.write(decoder.decode(value, { stream: true }));
-          setStatus(`受信中 (${bytes} bytes)`);
+          setState('RECV');
           resetIdleTimer();
         }
         term.write(decoder.decode());
-        setStatus(`終了 (${bytes} bytes)`);
+        setState('CLOSED');
       } catch (err) {
-        setStatus('エラー: ' + err.message);
+        setState('ERROR');
+        term.write('\r\n[ ' + err.message + ' ]\r\n');
       }
     }
 
@@ -360,7 +530,7 @@ pub async fn main(req: Request, env: Env, ctx: Context) -> Result<Response> {
         )?))
         .get("/view", |_req, _ctx| Ok(html_response(
             view_html(),
-            "default-src 'none'; script-src 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'unsafe-inline' https://cdn.jsdelivr.net; connect-src 'self'; base-uri 'none'; form-action 'none'",
+            "default-src 'none'; script-src 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src https://cdn.jsdelivr.net https://fonts.gstatic.com; connect-src 'self'; base-uri 'none'; form-action 'none'",
         )?))
         .get_async("/stream", |req, ctx| async move {
             let url = req.url()?;
