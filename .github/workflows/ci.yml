@@ -31,4 +31,4 @@ jobs:
       - run: worker-build --release --no-panic-recovery
 
       - name: Smoke-check bundle
-        run: test -f build/shim.mjs && test -f build/index_bg.wasm
+        run: test -f build/index.js && test -f build/worker/shim.mjs && test -f build/worker/index.wasm
