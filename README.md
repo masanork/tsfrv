@@ -14,8 +14,9 @@ Cloudflare Workers 上で動作する Rust WASM 版です。
 
 | エンドポイント | 説明 |
 |---|---|
-| [`/`](https://tsfrv.masanork.workers.dev/) | ヘルプ |
-| [`/stream`](https://tsfrv.masanork.workers.dev/stream) | 公告をテキストストリームで表示（デフォルト: `koukoku.shadan.open.ad.jp:992`） |
+| [`/`](https://tsfrv.masanork.workers.dev/) | ターミナルビューア（メイン画面） |
+| [`/help`](https://tsfrv.masanork.workers.dev/help) | ヘルプ |
+| [`/stream`](https://tsfrv.masanork.workers.dev/stream) | 公告を生テキストストリームで表示（デフォルト: `koukoku.shadan.open.ad.jp:992`） |
 | `/stream?server=HOST&port=PORT` | 任意の telnets サーバーへ接続 |
 | `/ws?server=HOST&port=PORT` | WebSocket で双方向セッション |
 

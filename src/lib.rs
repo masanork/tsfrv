@@ -302,6 +302,16 @@ fn view_html() -> String {
       color: var(--phosphor);
       text-shadow: 0 0 4px #39ff1444;
     }
+    .help-link {
+      color: #4a6a4a;
+      text-decoration: none;
+      font-size: 1rem;
+      letter-spacing: 0.08em;
+    }
+    .help-link:hover {
+      color: var(--phosphor);
+      text-shadow: 0 0 4px #39ff1444;
+    }
     #hint {
       margin-left: auto;
       font-size: 0.95rem;
@@ -368,6 +378,7 @@ fn view_html() -> String {
       <span id="bytes" class="seven-seg">0000000</span>
     </div>
     <span id="state">CONNECT</span>
+    <a href="/help" class="help-link">[ HELP ]</a>
     <span id="hint">公告は配信間隔があり、数十秒止まることがあります</span>
   </header>
   <div id="screen">
@@ -463,31 +474,153 @@ fn help_html() -> String {
 <html lang="ja">
 <head>
   <meta charset="utf-8">
-  <title>tsfrv</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>tsfrv — HELP</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=VT323&display=swap">
   <style>
-    body {{ font-family: system-ui, sans-serif; max-width: 48rem; margin: 2rem auto; line-height: 1.6; }}
-    code {{ background: #f4f4f4; padding: 0.1rem 0.3rem; border-radius: 0.2rem; }}
+    :root {{
+      --phosphor: #39ff14;
+      --phosphor-dim: #1a8f0a;
+      --amber: #ffaa33;
+    }}
+    body {{
+      margin: 0;
+      background: #000;
+      color: var(--phosphor);
+      font-family: 'VT323', 'DotGothic16', monospace;
+      font-size: 18px;
+      line-height: 1.45;
+    }}
+    header {{
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.6rem 1rem;
+      background: linear-gradient(180deg, #141a14 0%, #0d120d 100%);
+      border-bottom: 2px solid #2a1f14;
+    }}
+    .brand {{
+      font-size: 1.4rem;
+      letter-spacing: 0.15em;
+      text-shadow: 0 0 6px #39ff1466;
+    }}
+    .home-link {{
+      color: #4a6a4a;
+      text-decoration: none;
+      letter-spacing: 0.08em;
+    }}
+    .home-link:hover {{ color: var(--phosphor); text-shadow: 0 0 4px #39ff1444; }}
+    #screen {{
+      position: relative;
+      min-height: calc(100vh - 3rem);
+      background: #020a02;
+      padding: 1.25rem;
+      box-sizing: border-box;
+      text-shadow: 0 0 5px #39ff1444;
+    }}
+    #screen::before {{
+      content: '';
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: repeating-linear-gradient(
+        0deg, transparent, transparent 2px, #00000018 2px, #00000018 4px
+      );
+    }}
+    #screen::after {{
+      content: '';
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background: radial-gradient(ellipse at center, transparent 55%, #00000088 100%);
+    }}
+    .panel {{
+      position: relative;
+      z-index: 1;
+      max-width: 52rem;
+      margin: 0 auto;
+    }}
+    h1 {{
+      font-size: 1.6rem;
+      letter-spacing: 0.12em;
+      margin: 0 0 0.5rem;
+      color: var(--amber);
+      text-shadow: 0 0 8px #ffaa3344;
+    }}
+    .tagline {{ color: #5a8a5a; margin-bottom: 1.5rem; }}
+    h2 {{
+      font-size: 1.25rem;
+      color: var(--phosphor);
+      letter-spacing: 0.1em;
+      border-bottom: 1px solid #1a4a1a;
+      padding-bottom: 0.25rem;
+      margin: 1.5rem 0 0.75rem;
+    }}
+    ul {{ list-style: none; padding: 0; margin: 0; }}
+    li {{ padding: 0.2rem 0; }}
+    li::before {{ content: '> '; color: var(--phosphor-dim); }}
+    a {{ color: #66ff66; }}
+    a:hover {{ color: var(--phosphor); }}
+    code {{
+      color: var(--amber);
+      background: #0a1a0a;
+      padding: 0.1rem 0.35rem;
+      border: 1px solid #1a3a1a;
+    }}
+    .note {{
+      margin-top: 1.5rem;
+      padding: 0.75rem 1rem;
+      border: 1px solid #1a4a1a;
+      background: #061006;
+      color: #6a9a6a;
+    }}
+    .box {{
+      border: 1px solid #1a4a1a;
+      padding: 0.75rem 1rem;
+      margin-bottom: 1rem;
+      white-space: pre;
+      font-size: 0.95rem;
+      color: #5aaa5a;
+    }}
   </style>
 </head>
 <body>
-  <h1>tsfrv</h1>
-  <p>Telnet over SSL/TLS 電子公告ビューア (Cloudflare Workers / Rust WASM)</p>
-  <h2>エンドポイント</h2>
-  <ul>
-    <li><code>GET /stream</code> — 公告をテキストストリームで表示（デフォルト: {default_server}:{default_port}）</li>
-    <li><code>GET /stream?server=HOST&amp;port=PORT</code> — 許可された telnets サーバーへ接続</li>
-    <li><code>GET /ws?server=HOST&amp;port=PORT</code> — WebSocket で双方向セッション</li>
-  </ul>
-  <h2>例</h2>
-  <ul>
-    <li><a href="/view">/view</a>（ブラウザ向けターミナルビューア・推奨）</li>
-    <li><a href="/stream">/stream</a>（生テキスト）</li>
-  </ul>
-  <p>公告は配信間隔があるため、数十秒データが来ない時間があります。接続が切れたわけではありません。</p>
+  <header>
+    <span class="brand">TSFRV</span>
+    <a href="/" class="home-link">[ HOME ]</a>
+  </header>
+  <div id="screen">
+    <div class="panel">
+      <h1>SYSTEM MANUAL</h1>
+      <p class="tagline">Telnet over SSL/TLS 電子公告ビューア / Cloudflare Workers + Rust WASM</p>
+      <div class="box">┌─────────────────────────────────────────────┐
+│  TSFRV TERMINAL VIEWER              ONLINE  │
+│  GREEN PHOSPHOR DISPLAY / TELNETS STREAM    │
+└─────────────────────────────────────────────┘</div>
+      <h2>ENDPOINTS</h2>
+      <ul>
+        <li><code>GET /</code> — ターミナルビューア（メイン画面）</li>
+        <li><code>GET /stream</code> — 生テキストストリーム（<code>{default_server}:{default_port}</code>）</li>
+        <li><code>GET /stream?server=HOST&amp;port=PORT</code> — 許可された telnets サーバーへ接続</li>
+        <li><code>GET /ws?server=HOST&amp;port=PORT</code> — WebSocket 双方向セッション</li>
+      </ul>
+      <h2>LINKS</h2>
+      <ul>
+        <li><a href="/">/</a> — ターミナルビューア</li>
+        <li><a href="/stream">/stream</a> — 生テキスト（ブラウザ非推奨）</li>
+        <li><a href="https://github.com/masanork/tsfrv">GitHub</a> — ソースコード</li>
+      </ul>
+      <p class="note">NOTE: 公告は配信間隔があるため、数十秒データが来ない時間があります。RX LED が消えても接続は維持されています。STATUS が WAIT になるのは正常動作です。</p>
+    </div>
+  </div>
 </body>
 </html>"#
     )
 }
+
+const VIEW_CSP: &str = "default-src 'none'; script-src 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src https://cdn.jsdelivr.net https://fonts.gstatic.com; connect-src 'self'; base-uri 'none'; form-action 'none'";
+
+const HELP_CSP: &str = "default-src 'none'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; base-uri 'none'; form-action 'none'";
 
 fn html_headers(csp: &str) -> Result<worker::Headers> {
     let headers = worker::Headers::new();
@@ -520,18 +653,9 @@ pub async fn main(req: Request, env: Env, ctx: Context) -> Result<Response> {
     let router = Router::new();
 
     router
-        .get("/", |_req, _ctx| Ok(html_response(
-            help_html(),
-            "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'",
-        )?))
-        .get("/help", |_req, _ctx| Ok(html_response(
-            help_html(),
-            "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'",
-        )?))
-        .get("/view", |_req, _ctx| Ok(html_response(
-            view_html(),
-            "default-src 'none'; script-src 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src https://cdn.jsdelivr.net https://fonts.gstatic.com; connect-src 'self'; base-uri 'none'; form-action 'none'",
-        )?))
+        .get("/", |_req, _ctx| Ok(html_response(view_html(), VIEW_CSP)?))
+        .get("/view", |_req, _ctx| Ok(html_response(view_html(), VIEW_CSP)?))
+        .get("/help", |_req, _ctx| Ok(html_response(help_html(), HELP_CSP)?))
         .get_async("/stream", |req, ctx| async move {
             let url = req.url()?;
             let (default_server, default_port) = default_target();
