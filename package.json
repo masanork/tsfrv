@@ -8,6 +8,6 @@
     "sbom": "cargo cyclonedx --manifest-path Cargo.toml --format json --override-filename cyclonedx-rs --spec-version 1.5 --target wasm32-unknown-unknown && mkdir -p sbom && mv cyclonedx-rs.json sbom/ && npx @cyclonedx/cyclonedx-npm --output-file sbom/cyclonedx-npm.json && node scripts/generate-cbom.mjs"
   },
   "devDependencies": {
-    "wrangler": "^4.97.0"
+    "wrangler": "^4.105.0"
   }
 }
