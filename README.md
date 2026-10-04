@@ -26,10 +26,22 @@ Telnet over SSL/TLS プロトコルで提供される電子公告を閲覧する
 
 ## ローカル開発
 
+Rust 1.91 以上（`wasm32-unknown-unknown` ターゲット）と Node.js 22 以上が必要です。
+
 ```bash
 npm ci
 npm run dev      # wrangler dev
 npm run deploy   # Cloudflare へデプロイ
+```
+
+### 検証
+
+```bash
+cargo fmt --all -- --check
+cargo test --locked
+cargo clippy --locked --all-targets -- -D warnings
+cargo clippy --locked --target wasm32-unknown-unknown --lib -- -D warnings
+npm run build   # デプロイせずに Worker をビルド
 ```
 
 ## サプライチェーン

@@ -2,6 +2,7 @@
 name = "tsfrv"
 version = "0.1.0"
 edition = "2021"
+rust-version = "1.91"
 authors = ["Masanori Kusunoki <masanork@gmail.com>"]
 description = "tsfrv: Telnet over SSL/TLS 電子公告ビューア (Cloudflare Workers)"
 
@@ -9,8 +10,8 @@ description = "tsfrv: Telnet over SSL/TLS 電子公告ビューア (Cloudflare W
 crate-type = ["cdylib"]
 
 [dependencies]
-worker = { version = "0.8", features = ["http"] }
-worker-macros = { version = "0.8", features = ["http"] }
+worker = { version = "0.8.7", features = ["http"] }
+worker-macros = { version = "0.8.7", features = ["http"] }
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 futures-util = { version = "0.3", default-features = false, features = ["std"] }
 http = "1"

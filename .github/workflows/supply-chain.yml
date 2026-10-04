@@ -16,9 +16,9 @@ jobs:
   build-and-attest:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
           cache: npm
@@ -30,7 +30,7 @@ jobs:
       - name: Install tooling
         run: |
           cargo install cargo-cyclonedx --locked
-          cargo install worker-build@0.8.5 --locked
+          cargo install worker-build@0.8.7 --locked
 
       - run: npm ci
       - run: worker-build --release --no-panic-recovery
@@ -60,7 +60,7 @@ jobs:
           tar -czf dist/tsfrv-worker.tar.gz build sbom
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: tsfrv-supply-chain
           path: |

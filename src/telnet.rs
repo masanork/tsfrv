@@ -153,7 +153,11 @@ fn sanitize_output(processor: &mut TelnetProcessor, output: &mut Vec<u8>) {
 }
 
 fn normalize_crlf(input: &[u8]) -> Vec<u8> {
-    input.iter().copied().filter(|byte| *byte != b'\r').collect()
+    input
+        .iter()
+        .copied()
+        .filter(|byte| *byte != b'\r')
+        .collect()
 }
 
 fn strip_ansi(input: &[u8], pending: &mut bool) -> Vec<u8> {
