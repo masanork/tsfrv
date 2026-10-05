@@ -210,7 +210,7 @@ fn view_html() -> String {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>tsfrv view</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@6.0.0/css/xterm.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@6.1.0-beta.304/css/xterm.min.css">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=VT323&display=swap">
   <style>
     @font-face {
@@ -383,7 +383,7 @@ fn view_html() -> String {
   <div id="screen">
     <div id="terminal"></div>
   </div>
-  <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@6.0.0/lib/xterm.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@6.1.0-beta.304/lib/xterm.min.js"></script>
   <script>
     const ledTx = document.getElementById('led-tx');
     const ledRx = document.getElementById('led-rx');
