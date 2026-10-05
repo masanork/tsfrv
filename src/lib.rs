@@ -7,11 +7,11 @@ use futures_util::StreamExt;
 use security::{default_target, resolve_target};
 use telnet::{io_error, TelnetProcessor};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use worker::*;
 use worker::{
     ws_events::WebsocketEvent, Context, Env, Request, Response, Result, Router, SecureTransport,
     Socket, WebSocket, WebSocketPair,
 };
-use worker::*;
 
 fn query_param(url: &worker::Url, key: &str, default: &str) -> String {
     url.query_pairs()
@@ -111,8 +111,7 @@ async fn handle_websocket(req: Request, env: Env, ctx: Context) -> Result<Respon
     let mut processor = TelnetProcessor::new();
 
     ctx.wait_until(async move {
-        if let Err(error) =
-            bridge_websocket_to_telnet(server_ws, &mut telnet, &mut processor).await
+        if let Err(error) = bridge_websocket_to_telnet(server_ws, &mut telnet, &mut processor).await
         {
             console_error!("WebSocket bridge error: {error}");
         }
@@ -211,7 +210,7 @@ fn view_html() -> String {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>tsfrv view</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@6.0.0/css/xterm.min.css">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=VT323&display=swap">
   <style>
     @font-face {
@@ -384,7 +383,7 @@ fn view_html() -> String {
   <div id="screen">
     <div id="terminal"></div>
   </div>
-  <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@6.0.0/lib/xterm.min.js"></script>
   <script>
     const ledTx = document.getElementById('led-tx');
     const ledRx = document.getElementById('led-rx');
@@ -653,9 +652,9 @@ pub async fn main(req: Request, env: Env, ctx: Context) -> Result<Response> {
     let router = Router::new();
 
     router
-        .get("/", |_req, _ctx| Ok(html_response(view_html(), VIEW_CSP)?))
-        .get("/view", |_req, _ctx| Ok(html_response(view_html(), VIEW_CSP)?))
-        .get("/help", |_req, _ctx| Ok(html_response(help_html(), HELP_CSP)?))
+        .get("/", |_req, _ctx| html_response(view_html(), VIEW_CSP))
+        .get("/view", |_req, _ctx| html_response(view_html(), VIEW_CSP))
+        .get("/help", |_req, _ctx| html_response(help_html(), HELP_CSP))
         .get_async("/stream", |req, ctx| async move {
             let url = req.url()?;
             let (default_server, default_port) = default_target();

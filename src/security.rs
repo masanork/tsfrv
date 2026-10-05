@@ -50,7 +50,9 @@ fn normalize_hostname(server: &str) -> Result<String> {
     }
 
     if server.parse::<std::net::IpAddr>().is_ok() {
-        return Err(Error::RustError("direct IP connections are not allowed".into()));
+        return Err(Error::RustError(
+            "direct IP connections are not allowed".into(),
+        ));
     }
 
     if server.contains("..") || server.starts_with('-') || server.ends_with('-') {
@@ -87,7 +89,10 @@ fn validate_target(server: &str, port: u16, allowed: &[(String, u16)]) -> Result
         return Err(Error::RustError("port is not allowed".into()));
     }
 
-    if allowed.iter().any(|(host, allowed_port)| host == server && *allowed_port == port) {
+    if allowed
+        .iter()
+        .any(|(host, allowed_port)| host == server && *allowed_port == port)
+    {
         Ok((server.to_string(), port))
     } else {
         Err(Error::RustError("target is not in the allowlist".into()))
@@ -95,7 +100,10 @@ fn validate_target(server: &str, port: u16, allowed: &[(String, u16)]) -> Result
 }
 
 fn is_blocked_port(port: u16) -> bool {
-    matches!(port, 22 | 23 | 25 | 53 | 80 | 110 | 143 | 443 | 445 | 3306 | 5432 | 6379 | 11211)
+    matches!(
+        port,
+        22 | 23 | 25 | 53 | 80 | 110 | 143 | 443 | 445 | 3306 | 5432 | 6379 | 11211
+    )
 }
 
 #[cfg(test)]
